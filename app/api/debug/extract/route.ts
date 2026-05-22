@@ -35,6 +35,7 @@ export async function POST(request: Request): Promise<Response> {
   return Response.json({
     palavras: result.palavras,
     og_image: result.og_image,
+    body_images: result.body_images,
     body_images_count: result.body_images.length,
     videos_count: result.videos_embed.length,
     texto_preview: result.texto_limpo.slice(0, 300),
