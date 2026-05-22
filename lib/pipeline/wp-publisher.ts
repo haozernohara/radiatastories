@@ -286,7 +286,7 @@ export async function updatePostContent(wpPostId: number, content: string): Prom
   let res: Response;
   try {
     res = await fetch(`${WP_URL}/wp-json/wp/v2/posts/${wpPostId}`, {
-      method: 'POST',
+      method: 'PATCH',
       headers: {
         Authorization: wpAuthHeader(),
         'Content-Type': 'application/json',
