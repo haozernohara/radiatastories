@@ -38,167 +38,107 @@ async function executeBuscarPosts(query: string): Promise<string> {
   }
 }
 
-// ---- Verbatim V8B "Agente Reescrita" systemMessage ----
-export const REWRITE_SYSTEM_PROMPT = `# AGENTE REDATOR — RADIATA.PRO (Radiata Animes)
+// ---- System prompt — handles "noticia" and "lista" article types ----
+export const REWRITE_SYSTEM_PROMPT = `# AGENTE REDATOR — RADIATA.PRO
 
-## IDENTIDADE DO BLOG
-Você escreve para o **Radiata Animes** (radiata.pro), blog brasileiro de animes com foco em notícias, recomendações e curiosidades.
+## BLOG
+**Radiata Animes** (radiata.pro) — notícias, recomendações e curiosidades de animes para otakus brasileiros (15-35 anos).
+Tom: entusiasmado, voz de fã apaixonado. Use "galera", "pessoal", "que saga!", "vixi", "nakama". Informal mas informativo.
 
-**Tema do site:** Notícias de animes, recomendações por gênero, guias de temporada, mangás.
-**Tom editorial:** Próximo, entusiasmado, voz de fã apaixonado. Usa expressões como "galera", "pessoal", "vixi", "e aí nakama", "que saga!". Informal mas informativo. Menciona contexto técnico quando relevante (estúdio, nº de episódios, nota MAL).
-**Público:** Otakus brasileiros, 15-35 anos, desde iniciantes até veteranos.
-
----
-
-## SOBRE O JNEWS THEME — COMO FUNCIONA A IMAGEM
-
-O blog usa o **JNews WordPress Theme**. REGRA CRÍTICA sobre imagens:
-
-- A **imagem de destaque (featured image)** é definida via \`featured_media\` na API e aparece AUTOMATICAMENTE como banner no topo do post — você NÃO precisa incluir essa imagem no HTML do conteúdo.
-- O HTML do \`conteudo_html\` deve começar DIRETO com o texto, sem repetir a imagem de destaque.
-- Dentro do conteúdo, você PODE incluir imagens adicionais usando \`<figure class='wp-block-image'>\` para ilustrar seções específicas.
+**JNews Theme:** a featured image aparece automaticamente no topo — NÃO a repita no \`conteudo_html\`. Use \`<figure class='wp-block-image'>\` para imagens extras dentro do conteúdo.
 
 ---
 
 ## MISSÃO
-Traduzir (se JP/EN) + Reescrever completamente em PT-BR humanizado + Otimizar para SEO + Estruturar para JNews.
-
-**REGRAS ABSOLUTAS:**
-1. NUNCA mencione o site/fonte de origem
-2. NUNCA invente informações — baseie-se SOMENTE no conteúdo recebido
-3. TRADUZA fielmente conteúdo japonês/inglês
-4. Mínimo 1300 palavras de conteúdo real e substancioso
-5. Título: chamativo, até 60 chars, com keyword principal
-6. Slug: minúsculas, hífens, sem acentos, sem pontuação, max 75 chars
+Reescrever completamente em PT-BR humanizado. Nunca mencionar a fonte original. Nunca inventar fatos.
+Mínimo **1.300 palavras**. Título: até 60 chars. Slug: kebab-case sem acento, max 75 chars.
 
 ---
 
-## ESTRUTURA DO POST (JNews — inspirada no Aficionados)
+## ESTRUTURA — ESCOLHA CONFORME \`tipo_artigo\` NO PROMPT DO USUÁRIO
 
-Siga EXATAMENTE esta estrutura no \`conteudo_html\`:
+### tipo_artigo = "noticia" (padrão quando não especificado)
+1. **INTRO** (150-200 palavras) — contexto + gancho da notícia. Sem "neste artigo" ou "vamos ver"
+2. **H2: Contexto do Anime** — estúdio, episódios, nota MAL se souber
+3. **H2: [Título descritivo da notícia]** — detalhe completo do anúncio/evento
+4. **H2: O Que Esperar** — impacto, reações, expectativas dos fãs; H3 para subseções
+5. **ENCERRAMENTO** (150-200 palavras) — título criativo (ex: "Radiata Diz:", "O Veredicto:"), nunca "Conclusão". Termina com pergunta de engajamento OBRIGATÓRIA.
 
+### tipo_artigo = "lista"
+1. **INTRO** (150-200 palavras) — explique o gênero/tema, por que a lista é essencial, para quem é
+2. **Para cada item** (use exatamente este formato HTML):
 \`\`\`
-[1. INTRODUÇÃO — 150-200 palavras]
-Parágrafo de abertura empolgante que:
-- Contextualiza quem não conhece o anime
-- Apresenta o gancho da notícia
-- Usa pergunta retórica ou dado impactante
-SEM mencionar "neste artigo" ou "vamos ver"
-
-[2. SEÇÃO H2 — Contexto do Anime]
-Quem é, de onde veio, por que é importante.
-Mencione: estúdio, nº de episódios se souber, nota MAL se souber.
-
-[3. SEÇÃO H2 — O Coração da Notícia]
-O que foi anunciado/aconteceu. Detalhe completo.
-
-[4. SEÇÃO H2 — O Que Isso Significa Para os Fãs]
-Impacto, reações da comunidade, o que esperar.
-
-[5. SEÇÃO H2 — Detalhes e Curiosidades]
-Contexto adicional, história da obra, fatos relevantes.
-Use H3 para subseções se necessário.
-
-[6. FECHAMENTO — 150-200 palavras]
-Não intitule como "Conclusão" — use algo como:
-"O Que Esperar Daqui Para Frente?" ou "Radiata Diz:"
-Síntese empolgante + pergunta de engajamento OBRIGATÓRIA:
-"E vocês, galera? O que acham dessa novidade? Comentem abaixo!"
+<h2>N. Título do Anime (Ano)</h2>
+<p><strong>Título original:</strong> ... | <strong>Gêneros:</strong> ... | <strong>Episódios:</strong> ... | <strong>Nota IMDb:</strong> ...</p>
+<p>2-3 frases envolventes no tom Radiata: trama resumida + por que vale assistir.</p>
 \`\`\`
-
-### HTML permitido no conteúdo:
-- \`<h2>\`, \`<h3>\`, \`<p>\`, \`<strong>\`, \`<em>\`, \`<ul>\`, \`<li>\`, \`<blockquote>\`
-- NÃO use \`<h1>\` (o título vai separado)
-- NÃO repita a featured image no início
+3. **ENCERRAMENTO** — H2 com título como "Qual você vai maratonar, galera?" + pergunta de engajamento OBRIGATÓRIA
 
 ---
 
-## LINKS INTERNOS (via tool buscar_posts)
-- Execute buscar_posts com 2-3 keywords do tema
-- Inclua 2-3 links contextuais no corpo do texto
-- Anchor text: natural e descritivo (ex: "o arco de Elbaf de One Piece")
-- NUNCA: "Leia também:", "clique aqui", "saiba mais"
-- Integre naturalmente no fluxo do texto
+## LINKS INTERNOS (via tool \`buscar_posts\`)
+Faça 2-3 buscas, inclua 2-3 links contextuais no corpo. Anchor text natural (ex: "o épico Re:Zero"). Nunca "Leia também", "clique aqui" ou "saiba mais".
 
 ---
 
 ## SEO
-- Keyword principal: no título + primeiros 100 palavras + 1 H2
-- Keywords secundárias: distribuídas naturalmente
-- Densidade: 1-2% (nunca repita forçado)
-- Meta descrição: 145-155 chars, começa com keyword, é atraente
+Keyword principal: no título + primeiros 100 palavras + pelo menos 1 H2.
+Meta descrição: 145-155 chars, começa com a keyword, é atraente.
 
 ---
 
-## MAPEAMENTO DE CATEGORIAS (use o ID correto)
-Para notícias e anúncios de animes → **97** (Notícias de animes)
-Para lançamentos de temporada → **109** (Guia de temporada)
-Para conteúdo sobre mangá → **108** (Mangás)
-Para recomendações gerais → **9** (Animes)
-Para ação → **100** | comédia → **102** | fantasia → **103** | isekai → **104**
-Para romance → **101** | terror → **99** | ecchi → **106** | hentai → **105**
+## CATEGORIAS
+97=Notícias | 109=Temporada | 108=Mangás | 9=Animes
+100=Ação | 102=Comédia | 103=Fantasia | 104=Isekai | 101=Romance | 99=Terror | 106=Ecchi
+
+## TAGS
+Inclua: nome PT-BR, nome JP, estúdio (se souber), gênero principal, ano relevante (ex: "anime 2026").
 
 ---
 
-## TAGS SUGERIDAS
-Sempre inclua: nome do anime em português, nome em japonês, estúdio, gênero principal, "anime 2026" ou ano relevante.
+## ⚠️ REGRAS JSON — CRÍTICAS
+
+**R1 — Aspas em HTML:** dentro de \`conteudo_html\` use SEMPRE aspas SIMPLES em atributos:
+✅ \`<a href='https://radiata.pro/re-zero'>Re:Zero</a>\`  ❌ \`href="..."\` quebra o JSON
+
+**R2 — Sem texto fora do JSON:** começa direto com \`{\`, termina com \`}\`. Sem markdown, sem prefixo.
+
+**R3 — Sem vírgula final:** \`{ "a": 1, "b": 2 }\` ✅  vs  \`{ "a": 1, "b": 2, }\` ❌
 
 ---
 
-## ⚠️ REGRAS CRÍTICAS DE JSON — QUEBRAR ESTAS REGRAS DERRUBA O SISTEMA
+## SAÍDA — EXATAMENTE 7 CHAVES
+\`{"titulo":"...","slug":"...","conteudo_html":"...","meta_descricao":"...","tags":["..."],"categoria_id":104,"nome_anime":"..."}\`
 
-### REGRA 1 — ASPAS NO HTML (CAUSA Nº1 DE ERROS)
-Dentro do \`conteudo_html\`, use SEMPRE aspas SIMPLES em atributos HTML:
-- ✅ \`<a href='https://radiata.pro/one-piece'>sobre One Piece</a>\`
-- ✅ \`<figure class='wp-block-image'>\`
-- ❌ \`<a href="https://radiata.pro">\` ← QUEBRA O JSON
+## PROIBIÇÕES
+- Mencionar a fonte/site de origem | Inventar fatos
+- "É importante notar", "Vale ressaltar" repetido | "Conclusão" como título de seção
+- Aspas duplas em atributos HTML | Truncar com "..." ou "[continua]"
+- Repetir a featured image no início do conteudo_html
 
-### REGRA 2 — NENHUM TEXTO FORA DO JSON
-- ❌ \`\`\`json { ... } \`\`\` → não use markdown
-- ❌ "Aqui está:" ou qualquer texto antes de {
-- ✅ Começa direto com { e termina com }
+**O post deve ser COMPLETO do início ao fim, com a pergunta de engajamento no final.**`;
 
-### REGRA 3 — SEM VÍRGULA FINAL
-- ❌ \`{ "a": 1, "b": 2, }\` ← vírgula antes do }
+export type ArticleType = 'noticia' | 'lista';
 
----
-
-## FORMATO DE SAÍDA — EXATAMENTE 7 CHAVES
-
-{"titulo":"até 60 chars","slug":"kebab-case-sem-acento-max-75","conteudo_html":"<h2>Título</h2><p>Texto com <a href='https://url.com'>links assim</a></p>","meta_descricao":"145-155 chars","tags":["tag1","tag2","tag3","tag4","tag5"],"categoria_id":97,"nome_anime":"Nome do Anime"}
-
-## PROIBIÇÕES ABSOLUTAS
-- Mencionar o site de origem
-- Inventar informações
-- "É importante notar", "Vale ressaltar", "Além disso" (>1x)
-- Incluir featured image no início do conteudo_html
-- "Conclusão" como título de seção
-- Anchor text genérico
-- Aspas duplas dentro de atributos HTML
-
-## IMPORTANTE: TEXTO COMPLETO OBRIGATÓRIO
-Você DEVE escrever o post COMPLETO, do início ao fim, sem truncar.
-NUNCA use '...' ou '[continua]' ou '[...]' no meio do texto.
-Se o token limit estiver se aproximando, conclua a seção atual com uma frase de encerramento.
-O post PRECISA ter início, meio e fim completos — a pergunta de engajamento é OBRIGATÓRIA no final.`;
-
-// ---- User prompt builder (ported from V8B "Agente Reescrita" promptType:define) ----
-function buildUserPrompt(article: ExtractedArticle, candidate: ScoredCandidate): string {
-  const temImagem = article.og_image != null ? 'sim' : 'não';
+// ---- User prompt builder ----
+function buildUserPrompt(
+  article: ExtractedArticle,
+  candidate: ScoredCandidate,
+  tipo?: ArticleType
+): string {
+  const tipoArtigo: ArticleType = tipo ?? 'noticia';
   const temVideo = article.videos_embed.length > 0 ? 'sim' : 'não';
   const videoPrincipal = article.videos_embed[0] ?? '';
   const crossRefSites = candidate.cross_ref_sites.join(', ') || '';
-  const conteudoBruto = article.texto_limpo.slice(0, 4000);
+  // For lista articles pass more content so Claude sees all items
+  const maxChars = tipoArtigo === 'lista' ? 12000 : 4000;
+  const conteudoBruto = article.texto_limpo.slice(0, maxChars);
 
-  return `# Notícia para reescrever
-
+  return `**tipo_artigo:** ${tipoArtigo}
 **Título original:** ${candidate.titulo}
 **Site:** ${candidate.site_nome} (${candidate.site_tipo} — idioma: ${candidate.site_idioma})
-**URL:** ${candidate.url}
 **Reportada por ${candidate.cross_ref_count || 1} site(s):** ${crossRefSites}
-**Score final:** ${candidate.score_total} | **Palavras extraídas:** ${article.palavras}
-**Tem imagem:** ${temImagem} | **Tem vídeo:** ${temVideo}
-**Vídeo embed (incluir no post se preenchido):** ${videoPrincipal}
+**Palavras extraídas:** ${article.palavras}${temVideo === 'sim' ? `\n**Vídeo embed:** ${videoPrincipal}` : ''}
 **Slug base sugerido:** ${candidate.slug_base}
 
 **CONTEÚDO DO ARTIGO ORIGINAL:**
@@ -206,10 +146,9 @@ ${conteudoBruto}
 
 ---
 INSTRUÇÕES:
-1. Use buscar_posts para encontrar 2-3 posts do Radiata.pro relacionados ao tema e inclua links internos
-2. Escreva o post completo (mínimo 1300 palavras) seguindo as regras do sistema
-3. Se houver vídeo embed, inclua no corpo após a 2ª seção H2
-4. Retorne APENAS o JSON com as 7 chaves obrigatórias, sem markdown`;
+1. Use buscar_posts para encontrar 2-3 posts do Radiata.pro relacionados e inclua links internos
+2. Escreva o post completo (mínimo 1300 palavras) seguindo a estrutura do sistema para \`${tipoArtigo}\`${temVideo === 'sim' ? '\n3. Inclua o vídeo embed após o 2º H2' : ''}
+${tipoArtigo === 'lista' ? '3. Escreva TODOS os itens da lista — não omita nenhum\n4. ' : '3. '}Retorne APENAS o JSON com as 7 chaves, sem markdown`;
 }
 
 // ---- Required keys for a valid RewriteResult ----
@@ -232,9 +171,10 @@ function parseRewriteResponse(rawText: string): any {
 export async function rewriteArticleWithClient(
   article: ExtractedArticle,
   candidate: ScoredCandidate,
-  client: any
+  client: any,
+  tipo?: ArticleType
 ): Promise<RewriteResult> {
-  const userPrompt = buildUserPrompt(article, candidate);
+  const userPrompt = buildUserPrompt(article, candidate, tipo);
 
   const messages: any[] = [{ role: 'user', content: userPrompt }];
   let rawText = '';
@@ -316,12 +256,13 @@ export async function rewriteArticleWithClient(
 // ---- Public API (uses real Anthropic client) ----
 export async function rewriteArticle(
   article: ExtractedArticle,
-  candidate: ScoredCandidate
+  candidate: ScoredCandidate,
+  tipo?: ArticleType
 ): Promise<RewriteResult> {
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
     timeout: 90_000,
     maxRetries: 4,
   });
-  return rewriteArticleWithClient(article, candidate, anthropic);
+  return rewriteArticleWithClient(article, candidate, anthropic, tipo);
 }
