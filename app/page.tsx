@@ -1,7 +1,6 @@
 import { Sidebar } from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,6 +18,7 @@ import {
   getLatestRunCandidates,
   getDashboardStats,
 } from "@/lib/dashboard/queries";
+import { PipelineControls } from "@/components/pipeline-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -71,12 +71,14 @@ function StatusBadge({ status }: { status: string }) {
 
 export default async function DashboardPage() {
   const supabase = await createDashboardClient();
-  const [posts, runs, candidates, stats] = await Promise.all([
+  const [posts, runs, candidates, stats, pauseSetting] = await Promise.all([
     getRecentPosts(supabase, 20),
     getRecentRuns(supabase, 10),
     getLatestRunCandidates(supabase, 3),
     getDashboardStats(supabase),
+    supabase.from("settings").select("value").eq("key", "pipeline_paused_s1").single(),
   ]);
+  const isPaused = pauseSetting.data?.value === "true";
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -92,14 +94,7 @@ export default async function DashboardPage() {
                 Radiata Animes · radiata.pro
               </p>
             </div>
-            <div className="flex gap-2">
-              {/* Wired in Phase 2 */}
-              <Button size="sm" variant="outline">
-                ⏸ Pausar Sistema 1
-              </Button>
-              {/* Wired in Phase 2 */}
-              <Button size="sm">▶ Rodar agora</Button>
-            </div>
+            <PipelineControls initialPaused={isPaused} />
           </div>
 
           {/* Status cards */}
@@ -113,16 +108,15 @@ export default async function DashboardPage() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-2xl font-semibold">2 posts hoje</p>
+                    <p className="text-2xl font-semibold">
+                      {stats.posts_week} posts esta semana
+                    </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Próximo run às 22:00 BRT
+                      {isPaused ? "Sistema pausado" : "Rodando automaticamente"}
                     </p>
                   </div>
                   <div className="text-right space-y-1">
-                    <StatusBadge status="idle" />
-                    <p className="text-xs text-muted-foreground">
-                      Último: há 8h
-                    </p>
+                    <StatusBadge status={isPaused ? "paused" : "idle"} />
                   </div>
                 </div>
               </CardContent>
