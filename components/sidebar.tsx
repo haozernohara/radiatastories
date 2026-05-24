@@ -9,7 +9,7 @@ const navItems = [
   { href: "/posts", label: "Posts", icon: "📄" },
   { href: "/execucoes", label: "Execuções", icon: "🔄" },
   { href: "/logs", label: "Logs ao vivo", icon: "📡" },
-  { href: "/temas", label: "Temas", icon: "✏️", soon: true },
+  { href: "/temas", label: "Temas", icon: "✏️" },
 ];
 
 export function Sidebar() {

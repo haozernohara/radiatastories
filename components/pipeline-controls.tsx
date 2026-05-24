@@ -4,11 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-export function PipelineControls({
-  initialPaused,
-}: {
-  initialPaused: boolean;
-}) {
+export function PipelineControls({ initialPaused }: { initialPaused: boolean }) {
   const router = useRouter();
   const [paused, setPaused] = useState(initialPaused);
   const [triggering, setTriggering] = useState(false);
@@ -17,10 +13,39 @@ export function PipelineControls({
   async function handleTrigger() {
     if (triggering) return;
     setTriggering(true);
-    // Fire-and-forget: server continues running even after navigation
-    fetch("/api/dashboard/trigger", { method: "POST" }).catch(() => {});
-    // Navigate immediately to live logs
-    router.push("/logs");
+
+    try {
+      const res = await fetch("/api/dashboard/trigger", { method: "POST" });
+
+      // Already running — go see it
+      if (res.status === 423) {
+        router.push("/logs");
+        return;
+      }
+
+      if (!res.ok || !res.body) {
+        router.push("/logs");
+        return;
+      }
+
+      // Read first NDJSON line to get the runId (arrives in ~100ms, before heavy work)
+      const reader = res.body.getReader();
+      const { value } = await reader.read();
+      if (value) {
+        const firstLine = new TextDecoder().decode(value, { stream: true }).split("\n")[0].trim();
+        try {
+          const data = JSON.parse(firstLine);
+          if (data.runId) {
+            router.push(`/logs?run_id=${data.runId}`);
+            return;
+          }
+        } catch {}
+      }
+      router.push("/logs");
+    } catch {
+      router.push("/logs");
+    }
+    // Don't reset triggering — component unmounts on navigate
   }
 
   async function handleTogglePause() {
@@ -41,20 +66,18 @@ export function PipelineControls({
 
   return (
     <div className="flex gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={handleTogglePause}
-        disabled={togglingPause}
-      >
-        {togglingPause
-          ? "..."
-          : paused
-            ? "▶ Retomar Sistema 1"
-            : "⏸ Pausar Sistema 1"}
+      <Button size="sm" variant="outline" onClick={handleTogglePause} disabled={togglingPause}>
+        {togglingPause ? "..." : paused ? "▶ Retomar Sistema 1" : "⏸ Pausar Sistema 1"}
       </Button>
       <Button size="sm" onClick={handleTrigger} disabled={triggering}>
-        {triggering ? "Iniciando..." : "▶ Rodar agora"}
+        {triggering ? (
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin inline-block" />
+            Iniciando...
+          </span>
+        ) : (
+          "▶ Rodar agora"
+        )}
       </Button>
     </div>
   );

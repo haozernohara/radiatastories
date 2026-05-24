@@ -283,9 +283,17 @@ export async function runRssPipelineWithDeps(
 
 // --------------- Public API (real deps) ---------------
 
-export function runRssPipeline(supabase: any, options: RunOptions): Promise<RunResult> {
+export function runRssPipeline(
+  supabase: any,
+  options: RunOptions,
+  callbacks?: { onRunCreated?: (runId: string) => void }
+): Promise<RunResult> {
   return runRssPipelineWithDeps(supabase, options, {
-    createRun,
+    createRun: async (supabase: any, systemType: string) => {
+      const run = await createRun(supabase, systemType);
+      callbacks?.onRunCreated?.(run.id);
+      return run;
+    },
     completeRun,
     logStage,
     recordCandidates,
