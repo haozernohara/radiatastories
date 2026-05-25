@@ -57,6 +57,85 @@ const STAGE_LABELS: Record<string, string> = {
   error: "Erro",
 };
 
+const PIPELINE_STAGES = ["rss_fetch", "scoring", "extract", "rewrite", "qa", "publish"] as const;
+
+type StageStatus = "pending" | "running" | "done" | "error";
+
+function deriveStageStatuses(
+  logs: LogEntry[],
+  run: PipelineRun | null
+): Record<string, StageStatus> {
+  const stagesSeen = new Set(logs.map((l) => l.stage).filter((s) => PIPELINE_STAGES.includes(s as typeof PIPELINE_STAGES[number])));
+  const hasError = logs.some((l) => l.level === "error");
+  const isStillRunning = run?.status === "running";
+
+  const result: Record<string, StageStatus> = {};
+  let foundCurrentStage = false;
+
+  for (let i = PIPELINE_STAGES.length - 1; i >= 0; i--) {
+    const s = PIPELINE_STAGES[i];
+    if (stagesSeen.has(s)) {
+      if (!foundCurrentStage && isStillRunning) {
+        result[s] = "running";
+        foundCurrentStage = true;
+      } else {
+        result[s] = hasError && s === "publish" && run?.status === "failed" ? "error" : "done";
+      }
+    } else {
+      result[s] = foundCurrentStage || stagesSeen.size > 0 ? "pending" : "pending";
+    }
+  }
+
+  // If run is failed and no publish stage seen, mark last seen stage as error
+  if (run?.status === "failed" && hasError && !foundCurrentStage) {
+    const lastSeen = PIPELINE_STAGES.slice().reverse().find((s) => stagesSeen.has(s));
+    if (lastSeen) result[lastSeen] = "error";
+  }
+
+  // If run finished successfully, mark publish as done
+  if (run?.status === "success") {
+    PIPELINE_STAGES.forEach((s) => {
+      if (stagesSeen.has(s)) result[s] = "done";
+    });
+  }
+
+  return result;
+}
+
+function StagesPipeline({ logs, run }: { logs: LogEntry[]; run: PipelineRun | null }) {
+  const statuses = deriveStageStatuses(logs, run);
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {PIPELINE_STAGES.map((stage, i) => {
+        const status = statuses[stage] ?? "pending";
+        return (
+          <div key={stage} className="flex items-center gap-1">
+            <div className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+              status === "done" && "bg-green-500/15 border-green-500/30 text-green-400",
+              status === "running" && "bg-blue-500/15 border-blue-500/40 text-blue-400",
+              status === "error" && "bg-red-500/15 border-red-500/30 text-red-400",
+              status === "pending" && "bg-muted/30 border-border text-muted-foreground/50",
+            )}>
+              <span>
+                {status === "done" && "✓"}
+                {status === "running" && <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-pulse" />}
+                {status === "error" && "✗"}
+                {status === "pending" && "○"}
+              </span>
+              <span>{STAGE_ICONS[stage]}</span>
+              <span>{STAGE_LABELS[stage]}</span>
+            </div>
+            {i < PIPELINE_STAGES.length - 1 && (
+              <span className="text-muted-foreground/30 text-xs">→</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function stageIcon(stage: string): string {
   return STAGE_ICONS[stage] ?? "▸";
 }
@@ -300,6 +379,15 @@ function LogsContent() {
                     Erro: {run.error_message}
                   </p>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Pipeline stages visual */}
+          {(run || logs.length > 0) && (
+            <Card>
+              <CardContent className="pt-3 pb-3">
+                <StagesPipeline logs={logs} run={run} />
               </CardContent>
             </Card>
           )}

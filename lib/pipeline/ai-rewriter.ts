@@ -67,7 +67,7 @@ Traduzir (se JP/EN) + Reescrever completamente em PT-BR humanizado + Otimizar pa
 1. NUNCA mencione o site/fonte de origem
 2. NUNCA invente informações — baseie-se SOMENTE no conteúdo recebido
 3. TRADUZA fielmente conteúdo japonês/inglês
-4. Mínimo 1300 palavras de conteúdo real e substancioso
+4. Tamanho proporcional ao original — veja a instrução `alvo_palavras` no prompt do usuário
 5. Título: chamativo, até 60 chars, com keyword principal
 6. Slug: minúsculas, hífens, sem acentos, sem pontuação, max 75 chars
 
@@ -182,6 +182,14 @@ NUNCA use '...' ou '[continua]' ou '[...]' no meio do texto.
 Se o token limit estiver se aproximando, conclua a seção atual com uma frase de encerramento.
 O post PRECISA ter início, meio e fim completos — a pergunta de engajamento é OBRIGATÓRIA no final.`;
 
+// ---- Proportional word count target ----
+function targetWords(originalWords: number): { min: number; max: number } {
+  if (originalWords < 150) return { min: 350, max: 550 };
+  if (originalWords < 300) return { min: 500, max: 800 };
+  if (originalWords < 600) return { min: Math.round(originalWords * 1.6), max: 1000 };
+  return { min: Math.round(originalWords * 1.3), max: 1500 };
+}
+
 // ---- User prompt builder (ported from V8B "Agente Reescrita" promptType:define) ----
 function buildUserPrompt(article: ExtractedArticle, candidate: ScoredCandidate): string {
   const temImagem = article.og_image != null ? 'sim' : 'não';
@@ -189,6 +197,7 @@ function buildUserPrompt(article: ExtractedArticle, candidate: ScoredCandidate):
   const videoPrincipal = article.videos_embed[0] ?? '';
   const crossRefSites = candidate.cross_ref_sites.join(', ') || '';
   const conteudoBruto = article.texto_limpo.slice(0, 4000);
+  const target = targetWords(article.palavras);
 
   return `# Notícia para reescrever
 
@@ -200,6 +209,7 @@ function buildUserPrompt(article: ExtractedArticle, candidate: ScoredCandidate):
 **Tem imagem:** ${temImagem} | **Tem vídeo:** ${temVideo}
 **Vídeo embed (incluir no post se preenchido):** ${videoPrincipal}
 **Slug base sugerido:** ${candidate.slug_base}
+**alvo_palavras:** entre ${target.min} e ${target.max} palavras (proporcional ao original de ${article.palavras} palavras)
 
 **CONTEÚDO DO ARTIGO ORIGINAL:**
 ${conteudoBruto}
@@ -207,7 +217,7 @@ ${conteudoBruto}
 ---
 INSTRUÇÕES:
 1. Use buscar_posts para encontrar 2-3 posts do Radiata.pro relacionados ao tema e inclua links internos
-2. Escreva o post completo (mínimo 1300 palavras) seguindo as regras do sistema
+2. Escreva entre ${target.min} e ${target.max} palavras — proporcional ao original (não mais, não menos)
 3. Se houver vídeo embed, inclua no corpo após a 2ª seção H2
 4. Retorne APENAS o JSON com as 7 chaves obrigatórias, sem markdown`;
 }
