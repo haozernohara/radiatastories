@@ -67,7 +67,7 @@ Traduzir (se JP/EN) + Reescrever completamente em PT-BR humanizado + Otimizar pa
 1. NUNCA mencione o site/fonte de origem
 2. NUNCA invente informações — baseie-se SOMENTE no conteúdo recebido
 3. TRADUZA fielmente conteúdo japonês/inglês
-4. Tamanho proporcional ao original — veja a instrução `alvo_palavras` no prompt do usuário
+4. Tamanho proporcional ao original — veja a instrução \`alvo_palavras\` no prompt do usuário
 5. Título: chamativo, até 60 chars, com keyword principal
 6. Slug: minúsculas, hífens, sem acentos, sem pontuação, max 75 chars
 
