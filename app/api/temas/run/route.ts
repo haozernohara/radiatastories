@@ -5,6 +5,7 @@ import { createPipelineClient } from '@/lib/supabase/server';
 import { extractArticle } from '@/lib/pipeline/extractor';
 import { rewriteArticle } from '@/lib/pipeline/ai-rewriter';
 import { qaReview } from '@/lib/pipeline/ai-qa';
+import { fetchAnilistImages } from '@/lib/pipeline/anilist';
 import { uploadImageToWP, injectImagesIntoHtml, publishPost, ensureTags } from '@/lib/pipeline/wp-publisher';
 import { createRun, completeRun } from '@/lib/pipeline/state-logger';
 import type { ScoredCandidate } from '@/lib/pipeline/types';
@@ -81,6 +82,17 @@ export async function POST(req: Request): Promise<Response> {
 
         // ── Stage 4: Images ───────────────────────────────────────────────
         const imageUrls = [...new Set([article.og_image, ...article.body_images].filter(Boolean) as string[])];
+
+        // Garantir 2ª imagem no corpo: enriquecer com banner/capa do AniList (como no cron diário).
+        if (imageUrls.length < 3) {
+          const anilistImgs = await fetchAnilistImages(rewrite.nome_anime);
+          const fresh = anilistImgs.filter(u => u && !imageUrls.includes(u));
+          if (fresh.length > 0) {
+            log('images', `AniList: +${fresh.length} imagem(ns) para o corpo`);
+            imageUrls.push(...fresh);
+          }
+        }
+
         log('images', `Enviando ${Math.min(imageUrls.length, 5)} imagens para o WordPress...`);
 
         const uploadedImages: Array<{ id: number; source_url: string }> = [];

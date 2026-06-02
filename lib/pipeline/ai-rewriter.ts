@@ -260,18 +260,23 @@ export async function rewriteArticleWithClient(
   const messages: any[] = [{ role: 'user', content: userPrompt }];
   let rawText = '';
 
-  // Tool-use loop — max 3 iterations to prevent runaway tool calls
-  for (let iter = 0; iter < 3; iter++) {
+  // Tool-use loop — a ÚLTIMA iteração roda SEM tools, forçando o modelo a devolver
+  // o JSON final. Sem isso, se o modelo chamasse buscar_posts em todas as voltas
+  // (comum em artigos grandes, ex.: listas), rawText ficava vazio -> "No JSON object found".
+  const MAX_ITERS = 4;
+  for (let iter = 0; iter < MAX_ITERS; iter++) {
+    const isLast = iter === MAX_ITERS - 1;
     const response = await client.messages.create({
       model: MODELS.REWRITE,
       max_tokens: 16000,
       temperature: 0.4,
       system: REWRITE_SYSTEM_PROMPT,
       messages,
-      tools: [BUSCAR_POSTS_TOOL],
+      // Sem ferramentas na última volta -> o modelo é obrigado a responder texto (o JSON).
+      ...(isLast ? {} : { tools: [BUSCAR_POSTS_TOOL] }),
     });
 
-    if (response.stop_reason === 'tool_use') {
+    if (!isLast && response.stop_reason === 'tool_use') {
       // Append assistant message with all content blocks
       messages.push({ role: 'assistant', content: response.content });
 
@@ -293,7 +298,18 @@ export async function rewriteArticleWithClient(
       .filter((b: any) => b.type === 'text')
       .map((b: any) => b.text)
       .join('');
-    break;
+    if (rawText.trim()) break;
+
+    // Voltou sem texto (ex.: só tool_use) — registra e pede explicitamente o JSON.
+    messages.push({ role: 'assistant', content: response.content });
+    messages.push({
+      role: 'user',
+      content: 'Pare de usar ferramentas. Responda AGORA apenas com o objeto JSON final das 7 chaves obrigatórias, sem markdown e sem nenhum texto fora do JSON.',
+    });
+  }
+
+  if (!rawText.trim()) {
+    throw new Error('Reescritor não retornou texto após esgotar as iterações de tool-use (verifique o tamanho/qualidade do artigo de origem)');
   }
 
   // Extract and parse JSON
