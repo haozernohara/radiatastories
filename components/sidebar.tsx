@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const navItems: { href: string; label: string; icon: string; soon?: boolean }[] = [
   { href: "/", label: "Visão Geral", icon: "⚡" },
   { href: "/posts", label: "Posts", icon: "📄" },
   { href: "/execucoes", label: "Execuções", icon: "🔄" },
