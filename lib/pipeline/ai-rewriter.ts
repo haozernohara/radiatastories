@@ -8,6 +8,16 @@ import Anthropic from '@anthropic-ai/sdk';
 import { extractJsonObject } from './json-extract.ts';
 import { MODELS, type ExtractedArticle, type RewriteResult, type ScoredCandidate } from './types.ts';
 
+// --------------- sanitização de travessão (padrão Radiata: zero "—") ---------------
+// Remove travessão (— em-dash) e traço-meio (– en-dash), que dão "cara de IA".
+// Determinístico no retorno, para nunca depender do modelo obedecer o prompt.
+export function semTravessao(s: string): string {
+  return String(s)
+    .replace(/—/g, ' - ') // — em-dash
+    .replace(/–/g, '-')   // – en-dash
+    .replace(/ {2,}/g, ' '); // colapsa espaços duplos gerados pela troca
+}
+
 // --------------- buscar_posts tool ---------------
 
 const WP_URL_INTERNAL = process.env.WP_URL ?? 'https://radiata.pro';
@@ -175,6 +185,7 @@ Dentro do \`conteudo_html\`, use SEMPRE aspas SIMPLES em atributos HTML:
 - "Conclusão" como título de seção
 - Anchor text genérico
 - Aspas duplas dentro de atributos HTML
+- Travessão (— ou –). Use vírgula, ponto final, ou ' - ' (hífen com espaços). Travessão tem cara de IA.
 
 ## IMPORTANTE: TEXTO COMPLETO OBRIGATÓRIO
 Você DEVE escrever o post COMPLETO, do início ao fim, sem truncar.
@@ -305,18 +316,18 @@ export async function rewriteArticleWithClient(
   }
 
   const tags: string[] = Array.isArray(parsed.tags)
-    ? parsed.tags.map(String)
-    : [String(parsed.tags)];
+    ? parsed.tags.map((t: unknown) => semTravessao(String(t)))
+    : [semTravessao(String(parsed.tags))];
 
-  // Trim titulo and slug to max lengths
-  const titulo = String(parsed.titulo).slice(0, 60);
+  // Trim titulo and slug to max lengths (+ remove travessão do título)
+  const titulo = semTravessao(String(parsed.titulo)).slice(0, 60);
   const slug = String(parsed.slug).slice(0, 75);
 
   return {
     titulo,
     slug,
-    conteudo_html: String(parsed.conteudo_html),
-    meta_descricao: String(parsed.meta_descricao),
+    conteudo_html: semTravessao(String(parsed.conteudo_html)),
+    meta_descricao: semTravessao(String(parsed.meta_descricao)),
     tags,
     categoria_id: categoriaId,
     nome_anime: String(parsed.nome_anime),

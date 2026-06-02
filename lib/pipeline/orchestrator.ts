@@ -18,6 +18,7 @@ import { getRecentHashes, getRecentlyPublishedSites, scoreCandidates } from './s
 import { extractArticle, extractFromCrossRefs } from './extractor.ts';
 import { rewriteArticle } from './ai-rewriter.ts';
 import { qaReview } from './ai-qa.ts';
+import { fetchAnilistImages } from './anilist.ts';
 import { uploadImageToWP, injectImagesIntoHtml, publishPost, ensureTags } from './wp-publisher.ts';
 import { createRun, completeRun, logStage, recordCandidates } from './state-logger.ts';
 import type { RssSource, RssItem, ScoredCandidate, ExtractedArticle, RewriteResult, QAResult } from './types.ts';
@@ -57,6 +58,7 @@ export interface PipelineDeps {
   scoreCandidates: (items: RssItem[], recentHashes: Set<string>, recentSites: string[]) => ScoredCandidate[];
   extractArticle: (url: string) => Promise<ExtractedArticle>;
   extractFromCrossRefs: (refs: Array<{ url: string }>) => Promise<string[]>;
+  fetchAnilistImages: (animeName: string) => Promise<string[]>;
   rewriteArticle: (article: ExtractedArticle, candidate: ScoredCandidate) => Promise<RewriteResult>;
   qaReview: (rewrite: RewriteResult) => Promise<QAResult>;
   uploadImageToWP: (imageUrl: string, slug: string, index: number) => Promise<{ id: number; source_url: string } | null>;
@@ -186,6 +188,17 @@ export async function runRssPipelineWithDeps(
           imageUrls.push(...extras);
         }
 
+        // Garantir 2ª imagem no corpo: enriquecer com banner/capa do AniList.
+        // Apêndice (não vira featured, que continua sendo a og_image da fonte).
+        if (imageUrls.length < 3) {
+          const anilistImgs = await deps.fetchAnilistImages(rewrite.nome_anime);
+          const fresh = anilistImgs.filter(u => u && !imageUrls.includes(u));
+          if (fresh.length > 0) {
+            await deps.logStage(supabase, runId, 'publish', `AniList: +${fresh.length} imagem(ns) para o corpo`);
+            imageUrls.push(...fresh);
+          }
+        }
+
         const uploadedImages: Array<{ id: number; source_url: string }> = [];
         for (let i = 0; i < Math.min(imageUrls.length, 5); i++) {
           const img = await deps.uploadImageToWP(imageUrls[i], rewrite.slug, i + 1);
@@ -303,6 +316,7 @@ export function runRssPipeline(
     scoreCandidates,
     extractArticle,
     extractFromCrossRefs,
+    fetchAnilistImages,
     rewriteArticle,
     qaReview,
     uploadImageToWP,

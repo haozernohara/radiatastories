@@ -129,6 +129,7 @@ function makeBaseDeps(overrides: Partial<PipelineDeps> = {}): PipelineDeps {
     scoreCandidates: () => [],
     extractArticle: async () => makeArticle(),
     extractFromCrossRefs: async () => [],
+    fetchAnilistImages: async () => [],
     rewriteArticle: async () => makeRewrite(),
     qaReview: async () => makeQA(),
     uploadImageToWP: async () => ({ id: 101, source_url: 'https://radiata.pro/wp-content/uploads/img.jpg' }),
