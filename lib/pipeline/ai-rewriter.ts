@@ -18,6 +18,17 @@ export function semTravessao(s: string): string {
     .replace(/ {2,}/g, ' '); // colapsa espaços duplos gerados pela troca
 }
 
+// --------------- links internos relativos (evita self-pingback) ---------------
+// WordPress só dispara pingback para URLs absolutas que reconhece. Tornar os links
+// internos relativos (/slug/) impede que o post vire "comentário" em outros posts.
+const SELF_HOST = (process.env.WP_URL ?? 'https://radiata.pro').replace(/\/+$/, '');
+export function linksRelativos(html: string): string {
+  // href='https://radiata.pro/slug' -> href='/slug'  (com ou sem www, http/https)
+  const hostPattern = SELF_HOST.replace(/^https?:\/\//, '').replace(/\./g, '\\.');
+  const re = new RegExp(`(href=['"])https?://(?:www\\.)?${hostPattern}`, 'gi');
+  return String(html).replace(re, '$1');
+}
+
 // --------------- buscar_posts tool ---------------
 
 const WP_URL_INTERNAL = process.env.WP_URL ?? 'https://radiata.pro';
@@ -342,7 +353,7 @@ export async function rewriteArticleWithClient(
   return {
     titulo,
     slug,
-    conteudo_html: semTravessao(String(parsed.conteudo_html)),
+    conteudo_html: linksRelativos(semTravessao(String(parsed.conteudo_html))),
     meta_descricao: semTravessao(String(parsed.meta_descricao)),
     tags,
     categoria_id: categoriaId,
