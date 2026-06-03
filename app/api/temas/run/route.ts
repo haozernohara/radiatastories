@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 import { createPipelineClient } from '@/lib/supabase/server';
 import { extractArticle } from '@/lib/pipeline/extractor';
 import { rewriteArticle } from '@/lib/pipeline/ai-rewriter';
-import { qaReview } from '@/lib/pipeline/ai-qa';
 import { fetchAnilistImages } from '@/lib/pipeline/anilist';
 import { uploadImageToWP, injectImagesIntoHtml, publishPost, ensureTags } from '@/lib/pipeline/wp-publisher';
 import { createRun, completeRun } from '@/lib/pipeline/state-logger';
@@ -73,12 +72,15 @@ export async function POST(req: Request): Promise<Response> {
         const rewrite = await rewriteArticle(article, fakeCandidate);
         log('rewrite', `"${rewrite.titulo}" · ${rewrite.conteudo_html.length} chars`);
 
-        // ── Stage 3: QA ───────────────────────────────────────────────────
-        log('qa', 'Revisão de qualidade...');
-        const qa = await qaReview(rewrite);
-        log('qa', qa.aprovado
-          ? `Aprovado · média ${qa.media}`
-          : `Média ${qa.media} — aprovação ignorada (publicação manual)`, qa.aprovado ? 'info' : 'warn');
+        // ── Stage 3: QA (pulado no modo manual) ───────────────────────────
+        // A publicação manual sempre publica (QA era ignorado). Pular a chamada
+        // economiza uma rodada do Claude e reduz risco de timeout em artigos maiores.
+        const qa = {
+          aprovado: true, media: 0, motivo_reprovacao: null,
+          notas: { humanizacao: 0, coerencia: 0, seo_basico: 0, completude: 0, fidelidade: 0, portugues: 0 },
+          failsafe: true,
+        };
+        log('qa', 'QA pulado no modo manual (publicação manual sempre publica)');
 
         // ── Stage 4: Images ───────────────────────────────────────────────
         const imageUrls = [...new Set([article.og_image, ...article.body_images].filter(Boolean) as string[])];
