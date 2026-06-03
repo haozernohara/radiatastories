@@ -2,60 +2,58 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { Icon, type IconName } from "@/components/dash/icons";
 
-const navItems: { href: string; label: string; icon: string; soon?: boolean }[] = [
-  { href: "/", label: "Visão Geral", icon: "⚡" },
-  { href: "/posts", label: "Posts", icon: "📄" },
-  { href: "/execucoes", label: "Execuções", icon: "🔄" },
-  { href: "/logs", label: "Logs ao vivo", icon: "📡" },
-  { href: "/temas", label: "Temas", icon: "✏️" },
+const OPERACAO: { href: string; label: string; icon: IconName; badge?: string }[] = [
+  { href: "/", label: "Visão Geral", icon: "zap" },
+  { href: "/posts", label: "Posts", icon: "file" },
+  { href: "/execucoes", label: "Execuções", icon: "activity" },
+  { href: "/logs", label: "Logs ao vivo", icon: "terminal" },
+];
+const MANUAL: { href: string; label: string; icon: IconName; badge?: string }[] = [
+  { href: "/temas", label: "Temas", icon: "edit", badge: "novo" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+  const item = (it: { href: string; label: string; icon: IconName; badge?: string }) => {
+    const I = Icon[it.icon];
+    return (
+      <Link key={it.href} href={it.href} className={"nav-item" + (isActive(it.href) ? " active" : "")}>
+        <I />
+        <span>{it.label}</span>
+        {it.badge ? <span className="nav-badge">{it.badge}</span> : null}
+      </Link>
+    );
+  };
 
   return (
-    <aside className="w-56 shrink-0 border-r border-border bg-sidebar flex flex-col h-screen sticky top-0">
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🌸</span>
-          <div>
-            <p className="font-semibold text-sm leading-none">Radiata</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Blog Animes</p>
-          </div>
+    <aside className="sidebar">
+      <div className="brand">
+        <div className="brand-mark">
+          <Icon.spark style={{ width: 20, height: 20, color: "var(--magenta)" }} />
+        </div>
+        <div>
+          <div className="brand-name">Radiata</div>
+          <div className="brand-sub">radiata.pro</div>
         </div>
       </div>
 
-      <nav className="flex-1 p-2 space-y-0.5">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.soon ? "#" : item.href}
-            className={cn(
-              "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
-              pathname === item.href
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/60",
-              item.soon && "opacity-40 cursor-not-allowed pointer-events-none"
-            )}
-          >
-            <span className="text-base">{item.icon}</span>
-            <span>{item.label}</span>
-            {item.soon && (
-              <span className="ml-auto text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                em breve
-              </span>
-            )}
-          </Link>
-        ))}
+      <nav className="nav">
+        <div className="nav-label">Operação</div>
+        {OPERACAO.map(item)}
+        <div className="nav-label">Conteúdo manual</div>
+        {MANUAL.map(item)}
       </nav>
 
-      <div className="p-3 border-t border-border">
-        <div className="text-xs text-muted-foreground">
-          <p className="font-medium text-foreground/70">Sistema 1 ativo</p>
-          <p>radiata.pro · WordPress</p>
+      <div className="sidebar-foot">
+        <div className="l1">
+          <span className="sys-dot" />
+          Sistema 1 ativo
         </div>
+        <div className="l2">piloto automático · 1x/dia · ~07h</div>
       </div>
     </aside>
   );
