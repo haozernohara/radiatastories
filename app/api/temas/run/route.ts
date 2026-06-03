@@ -6,7 +6,7 @@ import { extractArticle } from '@/lib/pipeline/extractor';
 import { rewriteArticle } from '@/lib/pipeline/ai-rewriter';
 import { fetchAnilistImages } from '@/lib/pipeline/anilist';
 import { uploadImageToWP, injectImagesIntoHtml, publishPost, ensureTags } from '@/lib/pipeline/wp-publisher';
-import { createRun, completeRun } from '@/lib/pipeline/state-logger';
+import { createRun, completeRun, logStage } from '@/lib/pipeline/state-logger';
 import type { ScoredCandidate } from '@/lib/pipeline/types';
 
 function toSlug(text: string): string {
@@ -28,14 +28,23 @@ export async function POST(req: Request): Promise<Response> {
       const send = (data: object) => {
         try { controller.enqueue(encoder.encode(JSON.stringify(data) + '\n')); } catch {}
       };
-      const log = (stage: string, message: string, level: 'info' | 'warn' | 'error' = 'info') =>
-        send({ type: 'log', stage, message, level, ts: new Date().toISOString() });
-
       let runId: string | null = null;
+      const t0 = Date.now();
+      const elapsed = () => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;
+
+      // Loga para o navegador (stream) E persiste em pipeline_logs com tempo decorrido,
+      // para diagnóstico pós-falha (timeout não é capturável, mas as etapas ficam salvas).
+      const log = (stage: string, message: string, level: 'info' | 'warn' | 'error' = 'info') => {
+        send({ type: 'log', stage, message, level, ts: new Date().toISOString() });
+        if (runId) {
+          void logStage(supabase, runId, stage, `${message} [${elapsed()}]`, { level }).catch(() => {});
+        }
+      };
 
       try {
         const run = await createRun(supabase, 'manual');
         runId = run.id;
+        log('start', `Iniciando tema manual: ${body.url}`);
 
         // ── Stage 1: Extract ──────────────────────────────────────────────
         log('extract', `Extraindo conteúdo de ${body.url}`);
@@ -145,7 +154,10 @@ export async function POST(req: Request): Promise<Response> {
 
       } catch (err) {
         const msg = String(err);
-        if (runId) await completeRun(supabase, runId, { status: 'failed', error_message: msg }).catch(() => {});
+        if (runId) {
+          await logStage(supabase, runId, 'error', `Falha: ${msg} [${elapsed()}]`, { level: 'error' }).catch(() => {});
+          await completeRun(supabase, runId, { status: 'failed', error_message: msg }).catch(() => {});
+        }
         send({ type: 'error', message: msg });
       } finally {
         try { controller.close(); } catch {}
