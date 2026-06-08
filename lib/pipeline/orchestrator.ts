@@ -173,30 +173,19 @@ export async function runRssPipelineWithDeps(
           return { status: 'skipped', runId };
         }
 
-        // 6f: Image pipeline
-        const imageUrls: string[] = [
-          ...new Set(
-            [article.og_image, ...article.body_images].filter(Boolean) as string[]
-          ),
-        ];
-
-        if (imageUrls.length < 3) {
-          // PIPE-13: backfill from cross-ref sites
-          const extras = await deps.extractFromCrossRefs(
-            candidate.cross_ref_sites.map(url => ({ url }))
-          );
-          imageUrls.push(...extras);
+        // 6f: Image pipeline — AniList é a fonte PRIMÁRIA (anime certo garantido).
+        // NUNCA usar article.body_images: são a origem de thumbnails de "posts
+        // relacionados" de OUTROS animes (ex.: Frieren num post de Mushoku Tensei).
+        const anilistImgs = await deps.fetchAnilistImages(rewrite.nome_anime);
+        const imageUrls: string[] = [...new Set(anilistImgs.filter(Boolean))];
+        if (imageUrls.length > 0) {
+          await deps.logStage(supabase, runId, 'publish', `AniList: ${imageUrls.length} imagem(ns) do anime "${rewrite.nome_anime}"`);
         }
-
-        // Garantir 2ª imagem no corpo: enriquecer com banner/capa do AniList.
-        // Apêndice (não vira featured, que continua sendo a og_image da fonte).
-        if (imageUrls.length < 3) {
-          const anilistImgs = await deps.fetchAnilistImages(rewrite.nome_anime);
-          const fresh = anilistImgs.filter(u => u && !imageUrls.includes(u));
-          if (fresh.length > 0) {
-            await deps.logStage(supabase, runId, 'publish', `AniList: +${fresh.length} imagem(ns) para o corpo`);
-            imageUrls.push(...fresh);
-          }
+        // Fallback ÚNICO: a og:image da fonte (imagem principal, costuma ser do tema),
+        // só quando o AniList não encontrou nada. Nunca as imagens internas do corpo.
+        if (imageUrls.length === 0 && article.og_image) {
+          imageUrls.push(article.og_image);
+          await deps.logStage(supabase, runId, 'publish', 'AniList vazio — usando só a imagem principal da fonte', { level: 'warn' });
         }
 
         const uploadedImages: Array<{ id: number; source_url: string }> = [];

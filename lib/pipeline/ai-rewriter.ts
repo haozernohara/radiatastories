@@ -205,11 +205,13 @@ Se o token limit estiver se aproximando, conclua a seção atual com uma frase d
 O post PRECISA ter início, meio e fim completos — a pergunta de engajamento é OBRIGATÓRIA no final.`;
 
 // ---- Proportional word count target ----
+// Notícia deve ser enxuta (decisão Henri: textos estavam longos demais).
+// Alvos reduzidos: notícia simples ~300-550, substancial ~500-850, máx ~1000.
 function targetWords(originalWords: number): { min: number; max: number } {
-  if (originalWords < 150) return { min: 350, max: 550 };
-  if (originalWords < 300) return { min: 500, max: 800 };
-  if (originalWords < 600) return { min: Math.round(originalWords * 1.6), max: 1000 };
-  return { min: Math.round(originalWords * 1.3), max: 1500 };
+  if (originalWords < 150) return { min: 250, max: 420 };
+  if (originalWords < 400) return { min: 320, max: 600 };
+  if (originalWords < 800) return { min: 450, max: 750 };
+  return { min: 600, max: 1000 };
 }
 
 // ---- User prompt builder (ported from V8B "Agente Reescrita" promptType:define) ----

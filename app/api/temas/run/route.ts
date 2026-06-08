@@ -91,17 +91,15 @@ export async function POST(req: Request): Promise<Response> {
         };
         log('qa', 'QA pulado no modo manual (publicação manual sempre publica)');
 
-        // ── Stage 4: Images ───────────────────────────────────────────────
-        const imageUrls = [...new Set([article.og_image, ...article.body_images].filter(Boolean) as string[])];
-
-        // Garantir 2ª imagem no corpo: enriquecer com banner/capa do AniList (como no cron diário).
-        if (imageUrls.length < 3) {
-          const anilistImgs = await fetchAnilistImages(rewrite.nome_anime);
-          const fresh = anilistImgs.filter(u => u && !imageUrls.includes(u));
-          if (fresh.length > 0) {
-            log('images', `AniList: +${fresh.length} imagem(ns) para o corpo`);
-            imageUrls.push(...fresh);
-          }
+        // ── Stage 4: Images — AniList PRIMEIRO (anime certo garantido) ─────
+        // Nunca usar article.body_images (thumbnails de outros animes da fonte).
+        const anilistImgs = await fetchAnilistImages(rewrite.nome_anime);
+        const imageUrls = [...new Set(anilistImgs.filter(Boolean))];
+        if (imageUrls.length > 0) log('images', `AniList: ${imageUrls.length} imagem(ns) do anime "${rewrite.nome_anime}"`);
+        // Fallback único: a imagem principal da fonte, só se o AniList nada trouxe.
+        if (imageUrls.length === 0 && article.og_image) {
+          imageUrls.push(article.og_image);
+          log('images', 'AniList vazio — usando só a imagem principal da fonte', 'warn');
         }
 
         log('images', `Enviando ${Math.min(imageUrls.length, 5)} imagens para o WordPress...`);
