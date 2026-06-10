@@ -8,9 +8,10 @@ import type { RssSource } from './types';
 
 export const RSS_SOURCES: RssSource[] = [
   // === JAPONESES (chegam 6-12h antes no BR — EXCLUSIVIDADE) ===
-  { nome: 'natalie',        url: 'https://natalie.mu/comic/feed',                        idioma: 'ja', prioridade: 1, tipo: 'JP' },
-  { nome: 'mantanweb',      url: 'https://mantanweb.mainichi.jp/feed/anime',              idioma: 'ja', prioridade: 1, tipo: 'JP' },
-  { nome: 'oricon',         url: 'https://www.oricon.co.jp/rss/news/anime/',              idioma: 'ja', prioridade: 1, tipo: 'JP' },
+  // 2026-06: feeds antigos morreram (natalie/feed=404, mantanweb=offline, oricon=410).
+  // Substituídos pelos feeds JP atuais que retornam notícia fresca.
+  { nome: 'natalie',        url: 'https://natalie.mu/comic/feed/news',                    idioma: 'ja', prioridade: 1, tipo: 'JP' },
+  { nome: 'animeanime',     url: 'https://animeanime.jp/rss/index.rdf',                   idioma: 'ja', prioridade: 1, tipo: 'JP' },
   // === INTERNACIONAIS (2-4h antes dos BR) ===
   { nome: 'ann',            url: 'https://www.animenewsnetwork.com/all/rss.xml',          idioma: 'en', prioridade: 2, tipo: 'EN' },
   { nome: 'crunchyroll_en', url: 'https://www.crunchyroll.com/newsrss',                   idioma: 'en', prioridade: 2, tipo: 'EN' },

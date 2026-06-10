@@ -22,6 +22,10 @@ const BAIXO_VALOR: RegExp[] = [
   /merchandise|\bfigure\s*announce/i,
   /\bplush\b|\bgacha\b|\bcollab.*cafe/i,
   /annual.*ranking|\bBD.*ranking/i,
+  // --- Japonês: baixo valor (merchandise/ranking/colab) ---
+  /グッズ|フィギュア|ぬいぐるみ|アクリル|キーホルダー|缶バッジ/, // goods/figure/plush/acrylic/keychain/badge
+  /ランキング|売上|チャート/,                                  // ranking/sales/chart
+  /カフェ|コラボカフェ|予約受付|発売記念|抽選/,                  // cafe/collab-cafe/preorder/sale-commemoration/lottery
 ];
 
 const ALTO_VALOR: RegExp[] = [
@@ -39,6 +43,12 @@ const ALTO_VALOR: RegExp[] = [
   /cast|staff/i,
   /live.action|film|movie/i,
   /novo\s*anime|nova\s*série|nova\s*temporada/i,
+  // --- Japonês: alto valor (furo de notícia) ---
+  /発表|決定|解禁|公開/,        // announced/decided/unveiled/revealed
+  /続編|新作|新シリーズ|第\d期|期決定/, // sequel/new-work/new-series/season-N/season-confirmed
+  /アニメ化|実写化|映画化|劇場版/,   // anime-adaptation/live-action/film-adaptation/theatrical
+  /予告|ティザー|PV|本予告|特報/,    // trailer/teaser/PV/main-trailer/special-announcement
+  /放送|配信|キャスト|声優|ビジュアル|キービジュアル/, // broadcast/streaming/cast/voice-actor/visual/key-visual
 ];
 
 // --------------- Title normalization (verbatim from V8B "normalizarTitulo") ---------------
@@ -51,8 +61,10 @@ export function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')  // strip combining diacritical marks
-    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/[̀-ͯ]/g, '')  // strip Latin combining diacritical marks only
+    // Keep a-z0-9, whitespace AND Japanese (hiragana/katakana/kanji) so JP titles
+    // produce distinct hashes instead of all collapsing to md5('') and colliding.
+    .replace(/[^a-z0-9\s぀-ヿ㐀-䶿一-鿿ｦ-ﾟ]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
