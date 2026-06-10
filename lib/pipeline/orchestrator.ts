@@ -19,7 +19,7 @@ import { extractArticle, extractFromCrossRefs } from './extractor.ts';
 import { rewriteArticle } from './ai-rewriter.ts';
 import { qaReview } from './ai-qa.ts';
 import { fetchAnilistImages } from './anilist.ts';
-import { uploadImageToWP, injectImagesIntoHtml, publishPost, ensureTags } from './wp-publisher.ts';
+import { uploadImageToWP, injectImagesIntoHtml, injectVideoEmbed, publishPost, ensureTags } from './wp-publisher.ts';
 import { createRun, completeRun, logStage, recordCandidates } from './state-logger.ts';
 import type { RssSource, RssItem, ScoredCandidate, ExtractedArticle, RewriteResult, QAResult } from './types.ts';
 
@@ -63,6 +63,7 @@ export interface PipelineDeps {
   qaReview: (rewrite: RewriteResult) => Promise<QAResult>;
   uploadImageToWP: (imageUrl: string, slug: string, index: number) => Promise<{ id: number; source_url: string } | null>;
   injectImagesIntoHtml: (html: string, extras: Array<{ source_url: string }>) => string;
+  injectVideoEmbed: (html: string, embedUrl: string) => string;
   publishPost: (opts: { rewrite: RewriteResult; featured_media_id: number; tag_ids: number[] }) => Promise<{ id: number; link: string }>;
   ensureTags: (tags: string[]) => Promise<number[]>;
 }
@@ -181,11 +182,19 @@ export async function runRssPipelineWithDeps(
         if (imageUrls.length > 0) {
           await deps.logStage(supabase, runId, 'publish', `AniList: ${imageUrls.length} imagem(ns) do anime "${rewrite.nome_anime}"`);
         }
-        // Fallback ÚNICO: a og:image da fonte (imagem principal, costuma ser do tema),
-        // só quando o AniList não encontrou nada. Nunca as imagens internas do corpo.
-        if (imageUrls.length === 0 && article.og_image) {
+        // Garante uma 2ª imagem DISTINTA da destacada: quando o AniList só devolveu 1
+        // (sem bannerImage) ou nada (caso de games, que não existem no AniList), completa
+        // com a og:image da fonte — a imagem principal do próprio artigo, que é coerente
+        // com a notícia. NUNCA usar article.body_images (origem do bug de anime errado).
+        if (imageUrls.length < 2 && article.og_image && !imageUrls.includes(article.og_image)) {
           imageUrls.push(article.og_image);
-          await deps.logStage(supabase, runId, 'publish', 'AniList vazio — usando só a imagem principal da fonte', { level: 'warn' });
+          await deps.logStage(
+            supabase, runId, 'publish',
+            imageUrls.length === 1
+              ? 'AniList vazio — usando a imagem principal da fonte'
+              : 'Completando 2ª imagem (distinta) com a imagem da fonte',
+            { level: imageUrls.length === 1 ? 'warn' : 'info' }
+          );
         }
 
         const uploadedImages: Array<{ id: number; source_url: string }> = [];
@@ -206,6 +215,13 @@ export async function runRssPipelineWithDeps(
 
         // 6h: Inject extra images into HTML
         rewrite.conteudo_html = deps.injectImagesIntoHtml(rewrite.conteudo_html, extraImages);
+
+        // 6h-bis: Inject the source trailer (YouTube) when the article had one.
+        // videos_embed was extracted but previously dropped — fans want the trailer.
+        if (article.videos_embed.length > 0) {
+          rewrite.conteudo_html = deps.injectVideoEmbed(rewrite.conteudo_html, article.videos_embed[0]);
+          await deps.logStage(supabase, runId, 'publish', 'Trailer do YouTube injetado no corpo');
+        }
 
         // 6i: Publish
         await deps.logStage(supabase, runId, 'publish', `Publicando: ${rewrite.titulo}`);
@@ -310,6 +326,7 @@ export function runRssPipeline(
     qaReview,
     uploadImageToWP,
     injectImagesIntoHtml,
+    injectVideoEmbed,
     publishPost,
     ensureTags,
   });

@@ -134,6 +134,7 @@ function makeBaseDeps(overrides: Partial<PipelineDeps> = {}): PipelineDeps {
     qaReview: async () => makeQA(),
     uploadImageToWP: async () => ({ id: 101, source_url: 'https://radiata.pro/wp-content/uploads/img.jpg' }),
     injectImagesIntoHtml: (html) => html,
+    injectVideoEmbed: (html) => html,
     publishPost: async () => ({ id: 9999, link: 'https://radiata.pro/anime-reescrito/' }),
     ensureTags: async () => [1, 2],
     ...overrides,
@@ -294,6 +295,40 @@ describe('runRssPipelineWithDeps', () => {
 
     assert.equal(result.status, 'failed');
     assert.equal(result.reason, 'all candidates failed');
+  });
+
+  // Scenario: trailer + 2nd-image supplement (task #4)
+  test('live run: injects trailer from videos_embed and supplements 2nd image with og:image', async () => {
+    const supabase = makeMockSupabase('false');
+    const candidates = [makeCandidate({ url: 'https://ex.com/t1', hash: 'ht1' })];
+    const videoCalls: Array<[string, string]> = [];
+    const uploaded: string[] = [];
+
+    const result = await runRssPipelineWithDeps(
+      supabase,
+      { dryRun: false },
+      makeBaseDeps({
+        fetchAllFeeds: async () => candidates,
+        scoreCandidates: () => candidates,
+        extractArticle: async () =>
+          makeArticle({
+            og_image: 'https://src.example/og-scene.jpg',
+            videos_embed: ['https://www.youtube.com/embed/abc12345678'],
+          }),
+        // AniList returns only ONE image (no banner) → og:image must fill the 2nd slot
+        fetchAnilistImages: async () => ['https://anilist.example/cover.jpg'],
+        uploadImageToWP: async (url) => { uploaded.push(url); return { id: 200 + uploaded.length, source_url: url }; },
+        injectVideoEmbed: (html, embedUrl) => { videoCalls.push([html, embedUrl]); return html + `<!--video:${embedUrl}-->`; },
+      })
+    );
+
+    assert.equal(result.status, 'success');
+    // og:image was appended as the distinct 2nd image
+    assert.ok(uploaded.includes('https://anilist.example/cover.jpg'), 'AniList cover should be uploaded');
+    assert.ok(uploaded.includes('https://src.example/og-scene.jpg'), 'og:image should supplement as 2nd image');
+    // trailer injected exactly once with the extracted embed URL
+    assert.equal(videoCalls.length, 1, 'injectVideoEmbed should be called once');
+    assert.equal(videoCalls[0][1], 'https://www.youtube.com/embed/abc12345678');
   });
 
 });

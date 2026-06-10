@@ -11,7 +11,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { seoFilename, injectImagesIntoHtml } from './wp-publisher.ts';
+import { seoFilename, injectImagesIntoHtml, injectVideoEmbed } from './wp-publisher.ts';
 
 // --------------- seoFilename tests ---------------
 
@@ -120,5 +120,41 @@ describe('injectImagesIntoHtml', () => {
     for (let i = 1; i <= 5; i++) {
       assert.ok(result.includes(`Paragraph ${i}.`), `Paragraph ${i} missing after injection`);
     }
+  });
+});
+
+// --------------- injectVideoEmbed tests ---------------
+
+describe('injectVideoEmbed', () => {
+  const EMBED = 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+  const makeParagraphs = (n: number) =>
+    Array.from({ length: n }, (_, i) => `<p>Paragraph ${i + 1}.</p>`).join('');
+
+  it('returns html unchanged when embedUrl is empty', () => {
+    const html = makeParagraphs(4);
+    assert.equal(injectVideoEmbed(html, ''), html);
+  });
+
+  it('injects an iframe with the embed url into the body', () => {
+    const result = injectVideoEmbed(makeParagraphs(5), EMBED);
+    assert.ok(result.includes('<iframe'), 'iframe missing');
+    assert.ok(result.includes(EMBED), 'embed url missing');
+    for (let i = 1; i <= 5; i++) {
+      assert.ok(result.includes(`Paragraph ${i}.`), `Paragraph ${i} lost`);
+    }
+  });
+
+  it('is idempotent — does not inject the same trailer twice', () => {
+    const once = injectVideoEmbed(makeParagraphs(5), EMBED);
+    const twice = injectVideoEmbed(once, EMBED);
+    assert.equal(once, twice, 'second call should be a no-op');
+    assert.equal((twice.match(/<iframe/g) ?? []).length, 1, 'should only have one iframe');
+  });
+
+  it('appends when body has no closing </p> tags', () => {
+    const html = '<div>No paragraphs here</div>';
+    const result = injectVideoEmbed(html, EMBED);
+    assert.ok(result.includes(EMBED), 'embed url missing on append path');
+    assert.ok(result.startsWith(html), 'original content should be preserved');
   });
 });

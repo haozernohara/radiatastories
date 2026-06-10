@@ -220,6 +220,34 @@ export function injectImagesIntoHtml(
   return chunks.join('</p>');
 }
 
+/**
+ * Injects a single YouTube trailer embed into the HTML body.
+ * Pure function — no IO. The trailer comes from the source article's
+ * extracted videos_embed (a https://www.youtube.com/embed/{id} URL).
+ *
+ * Inserted after the 3rd </p> when the body is long enough, otherwise appended,
+ * so it sits between paragraphs and not before the lead. No-op when embedUrl is
+ * empty or already present (idempotent — safe to call twice).
+ */
+export function injectVideoEmbed(html: string, embedUrl: string): string {
+  if (!embedUrl) return html;
+  if (html.includes(embedUrl)) return html;
+
+  const figure =
+    `<figure class='wp-block-embed is-type-video is-provider-youtube'>` +
+    `<div class='wp-block-embed__wrapper'>` +
+    `<iframe width='560' height='315' src='${embedUrl}' title='Trailer' ` +
+    `frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' ` +
+    `allowfullscreen loading='lazy'></iframe></div></figure>`;
+
+  const chunks = html.split('</p>');
+  if (chunks.length <= 1) return html + figure;
+
+  const pos = chunks.length >= 4 ? 3 : chunks.length - 1;
+  chunks.splice(pos, 0, figure);
+  return chunks.join('</p>');
+}
+
 // --------------- Post publisher ---------------
 
 /**
