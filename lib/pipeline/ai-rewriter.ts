@@ -151,6 +151,15 @@ Síntese empolgante + pergunta de engajamento OBRIGATÓRIA:
 
 ---
 
+## GEO — SER CITADO PELAS IAs (AI Overviews, ChatGPT, Perplexity, Gemini)
+As IAs citam quem responde direto, com FATO específico e conteúdo fresco. Faça:
+- **Primeira frase = resposta direta**: já diga O QUE aconteceu, DE QUAL obra e QUANDO (data), sem enrolar. A IA precisa extrair o fato na primeira linha.
+- **Bloco "Resumo rápido"** logo após a introdução: um \`<ul>\` com 3-4 \`<li>\` curtos com os fatos-chave (o que foi anunciado, data de estreia, estúdio, nº de episódios/temporada, elenco-chave). É o trecho que a IA mais cita.
+- **Especificidade > vaguidão**: sempre prefira o dado concreto ("estreia em 12 de agosto, 8 episódios, pelo estúdio X") a frases genéricas ("chega em breve"). Se o fato existe no material, cite número, data e nome próprio.
+- **Mini-FAQ ao final** (antes do fechamento): um H2 "Perguntas frequentes" com 2-3 perguntas reais que as pessoas buscam (ex.: "Quando estreia?", "Onde assistir?", "Quantos episódios tem?") e respostas de 1-2 frases diretas. Só use fatos do material, não invente.
+
+---
+
 ## MAPEAMENTO DE CATEGORIAS (use o ID correto)
 Para notícias e anúncios de animes → **97** (Notícias de animes)
 Para lançamentos de temporada → **109** (Guia de temporada)

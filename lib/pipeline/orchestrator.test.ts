@@ -137,6 +137,7 @@ function makeBaseDeps(overrides: Partial<PipelineDeps> = {}): PipelineDeps {
     injectVideoEmbed: (html) => html,
     publishPost: async () => ({ id: 9999, link: 'https://radiata.pro/anime-reescrito/' }),
     ensureTags: async () => [1, 2],
+    pingIndexNow: async () => ({ ok: false, skipped: true }),
     ...overrides,
   };
 }

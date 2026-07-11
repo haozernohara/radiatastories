@@ -20,6 +20,7 @@ import { rewriteArticle } from './ai-rewriter.ts';
 import { qaReview } from './ai-qa.ts';
 import { fetchAnilistImages } from './anilist.ts';
 import { uploadImageToWP, injectImagesIntoHtml, injectVideoEmbed, publishPost, ensureTags } from './wp-publisher.ts';
+import { buildNewsArticleSchema, ensureImageAlts, pingIndexNow } from './seo.ts';
 import { createRun, completeRun, logStage, recordCandidates } from './state-logger.ts';
 import type { RssSource, RssItem, ScoredCandidate, ExtractedArticle, RewriteResult, QAResult } from './types.ts';
 
@@ -66,6 +67,7 @@ export interface PipelineDeps {
   injectVideoEmbed: (html: string, embedUrl: string) => string;
   publishPost: (opts: { rewrite: RewriteResult; featured_media_id: number; tag_ids: number[] }) => Promise<{ id: number; link: string }>;
   ensureTags: (tags: string[]) => Promise<number[]>;
+  pingIndexNow: (url: string) => Promise<{ ok: boolean; status?: number; skipped?: boolean }>;
 }
 
 // --------------- Settings loader ---------------
@@ -223,6 +225,17 @@ export async function runRssPipelineWithDeps(
           await deps.logStage(supabase, runId, 'publish', 'Trailer do YouTube injetado no corpo');
         }
 
+        // 6h-ter: Camada de SEO/GEO — alt nas imagens + schema NewsArticle (JSON-LD).
+        // Faz Google e as IAs (AI Overviews/ChatGPT/Perplexity/Gemini) entenderem o post.
+        rewrite.conteudo_html = ensureImageAlts(rewrite.conteudo_html, rewrite.nome_anime);
+        rewrite.conteudo_html += buildNewsArticleSchema({
+          titulo: rewrite.titulo,
+          slug: rewrite.slug,
+          meta: rewrite.meta_descricao,
+          imageUrl: featuredImage.source_url ?? null,
+          isoDate: new Date().toISOString(),
+        });
+
         // 6i: Publish
         await deps.logStage(supabase, runId, 'publish', `Publicando: ${rewrite.titulo}`);
         let publishResult: { id: number; link: string };
@@ -269,6 +282,14 @@ export async function runRssPipelineWithDeps(
         await deps.logStage(supabase, runId, 'publish', `Publicado com sucesso: ${publishResult.link}`, {
           metadata: { wp_post_id: publishResult.id, link: publishResult.link },
         });
+
+        // 6k: IndexNow — indexação instantânea (Bing/Yandex/etc). Best-effort.
+        const idx = await deps.pingIndexNow(publishResult.link);
+        await deps.logStage(
+          supabase, runId, 'seo',
+          idx.skipped ? 'IndexNow não configurado (pulado)' : `IndexNow: ${idx.ok ? 'enviado' : 'falhou'}${idx.status ? ` (${idx.status})` : ''}`,
+          { level: idx.ok || idx.skipped ? 'info' : 'warn' }
+        );
 
         return { status: 'success', runId, publishedPostId: publishResult.id };
 
@@ -329,5 +350,6 @@ export function runRssPipeline(
     injectVideoEmbed,
     publishPost,
     ensureTags,
+    pingIndexNow,
   });
 }
