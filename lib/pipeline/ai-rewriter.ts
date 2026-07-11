@@ -121,10 +121,13 @@ Contexto adicional, história da obra, fatos relevantes.
 Use H3 para subseções se necessário.
 
 [6. FECHAMENTO — 150-200 palavras]
-Não intitule como "Conclusão" — use algo como:
-"O Que Esperar Daqui Para Frente?" ou "Radiata Diz:"
-Síntese empolgante + pergunta de engajamento OBRIGATÓRIA:
-"E vocês, galera? O que acham dessa novidade? Comentem abaixo!"
+Não intitule como "Conclusão".
+PROIBIDO usar a frase "O que esperar daqui para frente" (está batida, cansou).
+Crie um H2 de fechamento ORIGINAL e ESPECÍFICO desta notícia, variando SEMPRE
+(ex.: use o nome do anime, uma referência ao fato, um trocadilho). Nunca repita
+um mesmo título de fechamento entre posts.
+Síntese empolgante + pergunta de engajamento no fim, também VARIADA a cada post
+(mude a redação; não use sempre "E vocês, galera? ... Comentem abaixo!").
 \`\`\`
 
 ### HTML permitido no conteúdo:
@@ -144,7 +147,7 @@ Síntese empolgante + pergunta de engajamento OBRIGATÓRIA:
 ---
 
 ## SEO
-- Keyword principal: no título + primeiros 100 palavras + 1 H2
+- Keyword principal: OBRIGATÓRIA no título, nos primeiros 100 palavras E dentro de pelo menos 1 subtítulo \`<h2>\` (não esqueça do H2 com a keyword)
 - Keywords secundárias: distribuídas naturalmente
 - Densidade: 1-2% (nunca repita forçado)
 - Meta descrição: 145-155 chars, começa com keyword, é atraente
