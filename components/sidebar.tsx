@@ -10,6 +10,9 @@ const OPERACAO: { href: string; label: string; icon: IconName; badge?: string }[
   { href: "/execucoes", label: "Execuções", icon: "activity" },
   { href: "/logs", label: "Logs ao vivo", icon: "terminal" },
 ];
+const SEO: { href: string; label: string; icon: IconName; badge?: string }[] = [
+  { href: "/radar-seo", label: "Radar SEO", icon: "search", badge: "novo" },
+];
 const MANUAL: { href: string; label: string; icon: IconName; badge?: string }[] = [
   { href: "/temas", label: "Temas", icon: "edit", badge: "novo" },
 ];
@@ -44,6 +47,8 @@ export function Sidebar() {
       <nav className="nav">
         <div className="nav-label">Operação</div>
         {OPERACAO.map(item)}
+        <div className="nav-label">SEO</div>
+        {SEO.map(item)}
         <div className="nav-label">Conteúdo manual</div>
         {MANUAL.map(item)}
       </nav>
