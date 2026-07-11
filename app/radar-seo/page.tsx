@@ -22,6 +22,7 @@ export default function RadarSeoPage() {
             Motor caseiro, sem API paga. Palavras-chave reais (Google Suggest), auditoria dos nossos posts e engenharia reversa da página 1.
           </p>
         </header>
+        <Oportunidades />
         <KeywordRadar />
         <Auditoria />
         <Comparar />
@@ -42,6 +43,46 @@ function Box({ title, desc, children }: { title: string; desc?: string; children
 }
 const inputS: React.CSSProperties = { flex: 1, minWidth: 160, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border,#26304a)", background: "var(--bg,#0b1120)", color: "inherit" };
 const btnS: React.CSSProperties = { padding: "8px 16px", borderRadius: 8, border: "none", background: "linear-gradient(90deg,#d946ef,#6366f1)", color: "#fff", fontWeight: 600, cursor: "pointer" };
+
+type Opp = { query: string; page: string; clicks: number; impressions: number; ctr: number; position: number };
+function Oportunidades() {
+  const [data, setData] = useState<{ configured: boolean; striking?: Opp[]; error?: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const run = async () => {
+    setLoading(true);
+    try { setData(await (await fetch(`/api/gsc`)).json()); } finally { setLoading(false); }
+  };
+  return (
+    <Box title="Oportunidades — distância de ataque (GSC)" desc="Palavras onde já aparecemos na posição 5-20 no Google: um empurrão sobe pra página 1. Maior ROI de SEO.">
+      <button style={btnS} onClick={run} disabled={loading}>{loading ? "Consultando…" : "Buscar oportunidades"}</button>
+      {data && !data.configured && (
+        <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.6, color: "var(--muted,#94a3b8)" }}>
+          <b>Search Console ainda não conectado.</b> Para ligar (grátis):<br />
+          1. Google Cloud → ative <b>Search Console API</b> → crie um <b>Service Account</b> → gere a chave JSON.<br />
+          2. No Search Console do radiata.pro → Configurações → Usuários → adicione o e-mail do service account (leitura).<br />
+          3. Na Vercel, adicione as variáveis <code>GSC_SERVICE_ACCOUNT_JSON</code> (o JSON inteiro) e <code>GSC_SITE_URL</code> (ex: <code>sc-domain:radiata.pro</code>).
+        </div>
+      )}
+      {data?.error && <div style={{ marginTop: 12, color: "#ef4444", fontSize: 12.5 }}>Erro: {data.error}</div>}
+      {data?.striking && data.striking.length > 0 && (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--muted,#94a3b8)", padding: "0 0 4px" }}>
+            <span style={{ width: 44 }}>pos</span><span style={{ flex: 1 }}>query</span><span style={{ width: 60, textAlign: "right" }}>impr.</span><span style={{ width: 50, textAlign: "right" }}>cliques</span>
+          </div>
+          {data.striking.map((o, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, fontSize: 12.5, padding: "3px 0", borderBottom: "1px solid var(--border,#1c2438)" }}>
+              <span style={{ width: 44, fontWeight: 700, color: o.position <= 10 ? "#eab308" : "#94a3b8" }}>{o.position.toFixed(1)}</span>
+              <span style={{ flex: 1 }}>{o.query}</span>
+              <span style={{ width: 60, textAlign: "right" }}>{Math.round(o.impressions)}</span>
+              <span style={{ width: 50, textAlign: "right" }}>{Math.round(o.clicks)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {data?.striking && data.striking.length === 0 && <div style={{ marginTop: 12, fontSize: 13 }}>Conectado, mas ainda sem queries em distância de ataque nessa janela.</div>}
+    </Box>
+  );
+}
 
 function KeywordRadar() {
   const [q, setQ] = useState("melhores animes isekai");
